@@ -22,6 +22,43 @@ if [[ "${target_platform}" == "win-"* ]]; then
     # Disable TIOCGWINSZ support on Windows to avoid including sys/ioctl.h.
     sed -i '/^#define[[:space:]]*POPT_USE_TIOCGWINSZ$/i #ifndef _WIN32' src/popthelp.c
     sed -i '/^#define[[:space:]]*POPT_USE_TIOCGWINSZ$/a #endif' src/popthelp.c
+
+    # Use Windows CRT equivalents for POSIX process APIs.
+    sed -i '/^#include <errno.h>$/a\
+    #ifdef _WIN32\
+    #include <io.h>\
+    #include <process.h>\
+    #define access _access\
+    #define execvp _execvp\
+    #define X_OK 0\
+    #endif' src/popt.c
+
+    # Skip Unix uid/gid checks on Windows.
+    sed -i '/#elif defined (HAVE_SETREUID)/,/^#endif$/ \
+      s/^[[:space:]]*#else$/#elif !defined(_WIN32)/' src/popt.c
+
+    # Use Windows CRT equivalents for POSIX file APIs.
+    sed -i '/^#include <errno.h>$/a\
+    #ifdef _WIN32\
+    #include <io.h>\
+    #define open _open\
+    #define lseek _lseek\
+    #define read _read\
+    #define close _close\
+    #ifndef S_ISREG\
+    #define S_ISREG(mode) (((mode) & _S_IFMT) == _S_IFREG)\
+    #endif\
+    #ifndef S_IXUSR\
+    #define S_IXUSR _S_IEXEC\
+    #define S_IXGRP 0\
+    #define S_IXOTH 0\
+    #endif\
+    #endif' src/poptconfig.c
+
+    # _read returns int on Windows.
+    sed -i \
+      's/read(fdno, (char \*)b, (size_t)nb) != (ssize_t)nb/read(fdno, (char *)b, (unsigned int)nb) != (int)nb/' \
+      src/poptconfig.c
 fi
 
 ./configure --prefix=${PREFIX} --disable-debug --disable-dependency-tracking --disable-static
