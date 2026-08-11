@@ -18,12 +18,16 @@ requirements:
   build:
     - ${{ compiler('c') }}
     - ${{ stdlib('c') }}
-    - ${{ 'autotools_clang_conda' if win }}
     - libiconv
     - if: unix
       then:
         - gnuconfig
         - make
+    - if: win
+      then:
+        - autotools_clang_conda
+        - m2-sed
+        
   host:
     - libiconv
   run_exports:
