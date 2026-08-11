@@ -20,9 +20,12 @@ requirements:
   build:
     - ${{ compiler('c') }}
     - ${{ stdlib('c') }}
-    - ${{ 'gnuconfig' if unix }}
+    - ${{ 'autotools_clang_conda' if win }}
     - libiconv
-    - make
+    - if: unix
+      then:
+        - gnuconfig
+        - make
   host:
     - libiconv
   run_exports:
