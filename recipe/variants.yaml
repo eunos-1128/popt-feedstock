@@ -1,8 +1,0 @@
-c_compiler:
-  - if: win
-    then:
-      - clang
-c_compiler_version:
-  - if: win
-    then:
-      - "19"
