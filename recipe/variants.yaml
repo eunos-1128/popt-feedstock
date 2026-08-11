@@ -5,4 +5,4 @@ c_compiler:
 c_compiler_version:
   - if: win
     then:
-      - "21"
+      - "19"
