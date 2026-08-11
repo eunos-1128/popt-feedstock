@@ -63,6 +63,23 @@ if [[ "${target_platform}" == "win-"* ]]; then
     sed -i \
       's/read(fdno, (char \*)b, (size_t)nb) != (ssize_t)nb/read(fdno, (char *)b, (unsigned int)nb) != (int)nb/' \
       src/poptconfig.c
+
+    # Mark exported global data as dllimport when consuming the DLL.
+    sed -i '/^#include <stdio.h>/a\
+    #if defined(_WIN32) && !defined(DLL_EXPORT)\
+    #define POPT_DATA __declspec(dllimport)\
+    #else\
+    #define POPT_DATA\
+    #endif' src/popt.h
+    
+    sed -i \
+      -e 's/^extern struct poptOption poptAliasOptions\[\];$/POPT_DATA extern struct poptOption poptAliasOptions[];/' \
+      -e 's/^extern struct poptOption poptHelpOptions\[\];$/POPT_DATA extern struct poptOption poptHelpOptions[];/' \
+      -e 's/^extern struct poptOption \* poptHelpOptionsI18N;$/POPT_DATA extern struct poptOption * poptHelpOptionsI18N;/' \
+      -e 's/^extern unsigned int _poptBitsN;$/POPT_DATA extern unsigned int _poptBitsN;/' \
+      -e 's/^extern  unsigned int _poptBitsM;$/POPT_DATA extern unsigned int _poptBitsM;/' \
+      -e 's/^extern  unsigned int _poptBitsK;$/POPT_DATA extern unsigned int _poptBitsK;/' \
+      src/popt.h
 fi
 
 ./configure --prefix=${PREFIX} --disable-debug --disable-dependency-tracking --disable-static
