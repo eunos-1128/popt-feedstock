@@ -1,0 +1,50 @@
+schema_version: 1
+
+context:
+  version: '1.19'
+
+package:
+  name: popt
+  version: ${{ version }}
+
+source:
+  url: http://ftp.rpm.org/popt/releases/popt-1.x/popt-${{ version }}.tar.gz
+  sha256: c25a4838fc8e4c1c8aacb8bd620edb3084a3d63bf8987fdad3ca2758c63240f9
+
+build:
+  number: 1
+  skip:
+    - win
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ stdlib('c') }}
+    - ${{ 'gnuconfig' if unix }}
+    - libiconv
+    - make
+  host:
+    - libiconv
+  run_exports:
+    - ${{ pin_subpackage('popt', upper_bound='x') }}
+
+tests:
+  - package_contents:
+      include:
+        - popt.h
+      lib:
+        - popt
+
+about:
+  homepage: http://ftp.rpm.org/popt
+  repository: https://github.com/rpm-software-management/popt
+  documentation: https://github.com/rpm-software-management/popt/blob/popt-${{ version }}-release/popt.pdf
+  license: MIT
+  license_file: COPYING
+  summary: 'C library for parsing command line parameters'
+
+extra:
+  recipe-maintainers:
+    - eunos-1128
+    - notestaff
+    - sodre
