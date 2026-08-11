@@ -13,6 +13,11 @@ if [[ "${target_platform}" == "win-"* ]]; then
       's/!defined(__GNUC__) && !defined(__attribute__)/!defined(__GNUC__) \&\& !defined(__clang__) \&\& !defined(__attribute__)/' \
       src/system.h
 
+    # Use the Windows CRT name for strdup.
+    sed -i \
+      's/^#define[[:space:]]*xstrdup(_str)[[:space:]]*strdup(_str)$/#define xstrdup(_str) _strdup(_str)/' \
+      src/system.h
+
     # Include unistd.h only when it is available.
     for file in src/popt.c src/poptconfig.c; do
         sed -i '/^#include <unistd.h>$/i #ifdef HAVE_UNISTD_H' "$file"
