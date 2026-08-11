@@ -34,8 +34,7 @@ if [[ "${target_platform}" == "win-"* ]]; then
     #endif' src/popt.c
 
     # Skip Unix uid/gid checks on Windows.
-    sed -i '/#elif defined (HAVE_SETREUID)/,/^#endif$/ \
-      s/^[[:space:]]*#else$/#elif !defined(_WIN32)/' src/popt.c
+    sed -i '/#elif defined (HAVE_SETREUID)/,/^#endif$/s/^[[:space:]]*#else$/#elif !defined(_WIN32)/' src/popt.c
 
     # Use Windows CRT equivalents for POSIX file APIs.
     sed -i '/^#include <errno.h>$/a\
