@@ -40,7 +40,20 @@ tests:
         - popt.h
       lib:
         - popt
-
+  - script:
+      - if: win
+        then:
+          - cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
+          - test_popt.exe
+    requirements:
+      run:
+        - if: win
+          then:
+            - ${{ compiler('c') }}
+    files:
+      recipe:
+        - test_popt.c
+    
 about:
   homepage: http://ftp.rpm.org/popt
   repository: https://github.com/rpm-software-management/popt
