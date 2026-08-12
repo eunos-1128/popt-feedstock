@@ -208,6 +208,11 @@ const struct poptOption * poptGetHelpOptions(void)\
     grep -n \
       'POPT_DATA\|poptGetAliasOptions\|poptGetHelpOptions' \
       src/popt.h src/popthelp.c || true
+
+    # Use an unversioned DLL name on Windows.
+    sed -i \
+      's/^\(libpopt_la_LDFLAGS[[:space:]]*=.*\)$/\1 -avoid-version/' \
+      src/Makefile.am
 fi
 
 ./configure --prefix=${PREFIX} --disable-debug --disable-dependency-tracking --disable-static
