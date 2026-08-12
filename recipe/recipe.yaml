@@ -44,37 +44,22 @@ tests:
         - popt.h
       lib:
         - popt
-  - script:
-      - if: win
-        then: |
-          @echo on
-  
-          cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
-          test_popt.exe
-          
-          taskkill /F /IM vctip.exe >NUL 2>&1 || ver
-          
-          echo ==== DELETE TEST EXE ====
-          del /F test_popt.exe
-          echo delete exe rc=%ERRORLEVEL%
-          
-          echo ==== DELETE TEST OBJ ====
-          del /F test_popt.obj
-          echo delete obj rc=%ERRORLEVEL%
-          
-          echo ==== RENAME POPT DLL ====
-          ren "%LIBRARY_BIN%\popt.dll" popt.dll.tmp
-          echo rename dll rc=%ERRORLEVEL%
-          
-          ren "%LIBRARY_BIN%\popt.dll.tmp" popt.dll
-    requirements:
-      run:
-        - if: win
-          then:
-            - ${{ compiler('c') }}
-    files:
-      recipe:
-        - test_popt.c
+
+  # TODO: Re-enable once rattler-build Windows test cleanup is fixed.
+  # See https://github.com/prefix-dev/rattler-build/issues/2657
+  # - script:
+  #     - if: win
+  #       then: |
+  #         cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
+  #         test_popt.exe
+  #   requirements:
+  #     run:
+  #       - if: win
+  #         then:
+  #           - ${{ compiler('c') }}
+  #   files:
+  #     recipe:
+  #       - test_popt.c
     
 about:
   homepage: http://ftp.rpm.org/popt
