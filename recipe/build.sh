@@ -2,6 +2,15 @@
 
 set -exo pipefail
 
+# The Windows gettext-tools package contains a non-relocatable autopoint
+# script whose gettext data path points to its original build environment.
+# Override gettext_datadir so autopoint can find archive.git.tar.gz in the
+# current conda build prefix.
+if [[ "${target_platform}" == win-* ]]; then
+    export gettext_datadir="$(cygpath -u "${BUILD_PREFIX}")/Library/share/gettext"
+    test -f "${gettext_datadir}/archive.git.tar.gz"
+fi
+
 ./autogen.sh
 
 # Get an updated config.sub and config.guess
