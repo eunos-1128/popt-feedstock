@@ -49,27 +49,24 @@ tests:
         then: |
           @echo on
   
-          echo ==== BEFORE CL ====
-          tasklist > "%TEMP%\popt-before.txt"
-          tasklist | findstr /I "vctip mspdbsrv" || ver
-  
           cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
           test_popt.exe
-  
-          echo ==== AFTER CL ====
-          tasklist > "%TEMP%\popt-after.txt"
-          tasklist | findstr /I "vctip mspdbsrv" || ver
-  
-          echo ==== PROCESS DIFF ====
-          fc "%TEMP%\popt-before.txt" "%TEMP%\popt-after.txt" || ver
-  
-          echo ==== KILL VCTIP ====
-          taskkill /F /IM vctip.exe || ver
-  
-          powershell -NoProfile -Command "Start-Sleep -Milliseconds 500"
-  
-          echo ==== AFTER KILL ====
-          tasklist | findstr /I "vctip mspdbsrv" || ver
+          
+          taskkill /F /IM vctip.exe >NUL 2>&1 || ver
+          
+          echo ==== DELETE TEST EXE ====
+          del /F test_popt.exe
+          echo delete exe rc=%ERRORLEVEL%
+          
+          echo ==== DELETE TEST OBJ ====
+          del /F test_popt.obj
+          echo delete obj rc=%ERRORLEVEL%
+          
+          echo ==== RENAME POPT DLL ====
+          ren "%LIBRARY_BIN%\popt.dll" popt.dll.tmp
+          echo rename dll rc=%ERRORLEVEL%
+          
+          ren "%LIBRARY_BIN%\popt.dll.tmp" popt.dll
     requirements:
       run:
         - if: win
