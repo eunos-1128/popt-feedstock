@@ -20,19 +20,18 @@ requirements:
   build:
     - ${{ compiler('c') }}
     - ${{ stdlib('c') }}
+    - gettext-tools
     - libiconv
     - if: unix
       then:
         - autoconf
         - automake
         - libtool
-        - gettext-tools
         - gnuconfig
         - make
     - if: win
       then:
         - autotools_clang_conda
-        - m2-gettext
         
   host:
     - libiconv
