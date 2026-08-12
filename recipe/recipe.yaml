@@ -23,6 +23,10 @@ requirements:
     - libiconv
     - if: unix
       then:
+        - autoconf
+        - automake
+        - libtool
+        - gettext-tools
         - gnuconfig
         - make
     - if: win
