@@ -48,11 +48,28 @@ tests:
       - if: win
         then: |
           @echo on
-          @REM See https://github.com/prefix-dev/rattler-build/issues/2657
+  
+          echo ==== BEFORE CL ====
+          tasklist > "%TEMP%\popt-before.txt"
+          tasklist | findstr /I "vctip mspdbsrv" || ver
+  
           cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
           test_popt.exe
-          tasklist | findstr /I vctip || ver
-          taskkill /F /IM vctip.exe >NUL 2>&1 || ver
+  
+          echo ==== AFTER CL ====
+          tasklist > "%TEMP%\popt-after.txt"
+          tasklist | findstr /I "vctip mspdbsrv" || ver
+  
+          echo ==== PROCESS DIFF ====
+          fc "%TEMP%\popt-before.txt" "%TEMP%\popt-after.txt" || ver
+  
+          echo ==== KILL VCTIP ====
+          taskkill /F /IM vctip.exe || ver
+  
+          powershell -NoProfile -Command "Start-Sleep -Milliseconds 500"
+  
+          echo ==== AFTER KILL ====
+          tasklist | findstr /I "vctip mspdbsrv" || ver
     requirements:
       run:
         - if: win
