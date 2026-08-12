@@ -1,0 +1,610 @@
+From e7113e5f3d33b0fd19dbdebf5a542fff8d09eba4 Mon Sep 17 00:00:00 2001
+From: "UENO, M." <eunosium-1128@live.jp>
+Date: Wed, 12 Aug 2026 08:17:05 +0000
+Subject: [PATCH] Add Windows compatibility support
+
+---
+ src/popt.c       | 61 +++++++++++++++++++++++++++++++++-------
+ src/popt.h       | 61 ++++++++++++++++++++++++++--------------
+ src/poptconfig.c | 25 ++++++++++++++---
+ src/popthelp.c   | 72 ++++++++++++++++++++++++++++++++++++++----------
+ src/system.h     |  8 ++++--
+ 5 files changed, 175 insertions(+), 52 deletions(-)
+
+diff --git a/src/popt.c b/src/popt.c
+index f3f26a3..16b46de 100644
+--- a/src/popt.c
++++ b/src/popt.c
+@@ -12,9 +12,18 @@
+ 
+ #include <float.h>
+ #include <math.h>
++#ifdef HAVE_UNISTD_H
+ #include <unistd.h>
++#endif
+ #include <limits.h>
+ #include <errno.h>
++#ifdef _WIN32
++#include <io.h>
++#include <process.h>
++#define access _access
++#define execvp _execvp
++#define X_OK 0
++#endif
+ 
+ #include "poptint.h"
+ 
+@@ -74,8 +83,16 @@ static void invokeCallbacksPRE(poptContext con, const struct poptOption * opt)
+     if (opt != NULL)
+     for (; opt->longName || opt->shortName || opt->arg; opt++) {
+ 	poptArg arg = { .ptr = opt->arg };
++#ifdef _WIN32
++	if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC && opt->arg != NULL) {
++	    const struct poptOption *(*getTable)(void) =
++		(const struct poptOption *(*)(void))opt->arg;
++	    arg.opt = getTable();
++	}
++#endif
+ 	if (arg.ptr)
+ 	switch (poptArgType(opt)) {
++	case POPT_ARG_INCLUDE_TABLE_FUNC:
+ 	case POPT_ARG_INCLUDE_TABLE:	/* Recurse on included sub-tables. */
+ 	    poptSubstituteHelpI18N(arg.opt);	/* XXX side effects */
+ 	    invokeCallbacksPRE(con, arg.opt);
+@@ -94,8 +111,16 @@ static void invokeCallbacksPOST(poptContext con, const struct poptOption * opt)
+     if (opt != NULL)
+     for (; opt->longName || opt->shortName || opt->arg; opt++) {
+ 	poptArg arg = { .ptr = opt->arg };
++#ifdef _WIN32
++	if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC && opt->arg != NULL) {
++	    const struct poptOption *(*getTable)(void) =
++		(const struct poptOption *(*)(void))opt->arg;
++	    arg.opt = getTable();
++	}
++#endif
+ 	if (arg.ptr)
+ 	switch (poptArgType(opt)) {
++	case POPT_ARG_INCLUDE_TABLE_FUNC:
+ 	case POPT_ARG_INCLUDE_TABLE:	/* Recurse on included sub-tables. */
+ 	    poptSubstituteHelpI18N(arg.opt);	/* XXX side effects */
+ 	    invokeCallbacksPOST(con, arg.opt);
+@@ -120,11 +145,19 @@ static void invokeCallbacksOPTION(poptContext con,
+     if (opt != NULL)
+     for (; opt->longName || opt->shortName || opt->arg; opt++) {
+ 	poptArg arg = { .ptr = opt->arg };
++	#ifdef _WIN32
++	if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC && opt->arg != NULL) {
++	    const struct poptOption *(*getTable)(void) =
++		(const struct poptOption *(*)(void))opt->arg;
++	    arg.opt = getTable();
++	}
++	#endif
+ 	switch (poptArgType(opt)) {
++	case POPT_ARG_INCLUDE_TABLE_FUNC:
+ 	case POPT_ARG_INCLUDE_TABLE:	/* Recurse on included sub-tables. */
+ 	    poptSubstituteHelpI18N(arg.opt);	/* XXX side effects */
+-	    if (opt->arg != NULL)
+-		invokeCallbacksOPTION(con, opt->arg, myOpt, myData, shorty);
++	    if (arg.opt != NULL)
++		invokeCallbacksOPTION(con, arg.opt, myOpt, myData, shorty);
+ 	    break;
+ 	case POPT_ARG_CALLBACK:		/* Save callback info. */
+ 	    if (CBF_ISSET(opt, SKIPOPTION))
+@@ -378,7 +411,7 @@ static int handleAlias(poptContext con,
+     con->os->currAlias = con->aliases + i;
+     {	const char ** av;
+ 	int ac = con->os->currAlias->argc;
+-	/* Append --foo=bar arg to alias argv array (if present). */ 
++	/* Append --foo=bar arg to alias argv array (if present). */
+ 	if (longName && nextArg != NULL && *nextArg != '\0') {
+ 	    av = malloc((ac + 1 + 1) * sizeof(*av));
+ 	    if (av != NULL) {	/* XXX won't happen. */
+@@ -516,7 +549,7 @@ static int execCommand(poptContext con)
+     if (rc) goto exit;
+     rc = setreuid(getuid(), getuid());
+     if (rc) goto exit;
+-#else
++#elif !defined(_WIN32)
+     /* refuse to exec if we cannot drop suid/sgid privileges */
+     if (getuid() != geteuid() || getgid() != getegid()) {
+ 	errno = ENOTSUP;
+@@ -566,8 +599,16 @@ findOption(const struct poptOption * opt,
+ 
+     for (; opt->longName || opt->shortName || opt->arg; opt++) {
+ 	poptArg arg = { .ptr = opt->arg };
++#ifdef _WIN32
++	if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC && opt->arg != NULL) {
++	    const struct poptOption *(*getTable)(void) =
++		(const struct poptOption *(*)(void))opt->arg;
++	    arg.opt = getTable();
++	}
++#endif
+ 
+ 	switch (poptArgType(opt)) {
++	case POPT_ARG_INCLUDE_TABLE_FUNC:
+ 	case POPT_ARG_INCLUDE_TABLE:	/* Recurse on included sub-tables. */
+ 	{   const struct poptOption * opt2;
+ 
+@@ -906,7 +947,7 @@ int poptSaveString(const char *** argvp,
+     if (*argvp != NULL)
+     while ((*argvp)[argc] != NULL)
+ 	argc++;
+- 
++
+     if ((*argvp = xrealloc(*argvp, (argc + 1 + 1) * sizeof(**argvp))) != NULL) {
+ 	(*argvp)[argc++] = xstrdup(val);
+ 	(*argvp)[argc  ] = NULL;
+@@ -1405,7 +1446,7 @@ int poptGetNextOpt(poptContext con)
+ 		    {
+ 			poptStripArg(con, con->os->next);
+ 		    }
+-		
++
+ 		    if (con->os->argv != NULL) {	/* XXX can't happen */
+ 			if (F_ISSET(opt, OPTIONAL) &&
+ 			    con->os->argv[con->os->next][0] == '-') {
+@@ -1546,7 +1587,7 @@ poptContext poptFreeContext(poptContext con)
+     con->otherHelp = _free(con->otherHelp);
+     con->execPath = _free(con->execPath);
+     con->arg_strip = PBM_FREE(con->arg_strip);
+-    
++
+     con = _free(con);
+     return con;
+ }
+@@ -1696,19 +1737,19 @@ int poptStrippedArgv(poptContext con, int argc, char ** argv)
+     int numargs = argc;
+     int j = 1;
+     int i;
+-    
++
+     if (con->arg_strip)
+     for (i = 1; i < argc; i++) {
+ 	if (PBM_ISSET(i, con->arg_strip))
+ 	    numargs--;
+     }
+-    
++
+     for (i = 1; i < argc; i++) {
+ 	if (con->arg_strip && PBM_ISSET(i, con->arg_strip))
+ 	    continue;
+ 	argv[j] = (j < numargs) ? argv[i] : NULL;
+ 	j++;
+     }
+-    
++
+     return numargs;
+ }
+diff --git a/src/popt.h b/src/popt.h
+index bd16061..f7e17ad 100644
+--- a/src/popt.h
++++ b/src/popt.h
+@@ -2,7 +2,7 @@
+  */
+ 
+ /* (C) 1998-2000 Red Hat, Inc. -- Licensing details are in the COPYING
+-   file accompanying popt source distributions, available from 
++   file accompanying popt source distributions, available from
+    ftp://ftp.rpm.org/pub/rpm/dist. */
+ 
+ #ifndef H_POPT
+@@ -10,6 +10,12 @@
+ 
+ #include <stdio.h>			/* for FILE * */
+ 
++#if defined(_WIN32) && !defined(DLL_EXPORT)
++#define POPT_DATA __declspec(dllimport)
++#else
++#define POPT_DATA
++#endif
++
+ #define POPT_OPTION_DEPTH	10
+ 
+ /**
+@@ -21,8 +27,8 @@
+ #define POPT_ARG_LONG		 3U	/*!< arg ==> long */
+ #define POPT_ARG_INCLUDE_TABLE	 4U	/*!< arg points to table */
+ #define POPT_ARG_CALLBACK	 5U	/*!< table-wide callback... must be
+-					   set first in table; arg points 
+-					   to callback, descrip points to 
++					   set first in table; arg points
++					   to callback, descrip points to
+ 					   callback data to pass */
+ #define POPT_ARG_INTL_DOMAIN     6U	/*!< set the translation domain
+ 					   for this table and any
+@@ -144,19 +150,27 @@ typedef struct poptItem_s {
+ /**
+  * Empty table marker to enable displaying popt alias/exec options.
+  */
+-extern struct poptOption poptAliasOptions[];
++POPT_DATA extern struct poptOption poptAliasOptions[];
++#ifdef _WIN32
++#define POPT_AUTOALIAS { NULL, '\0', POPT_ARG_INCLUDE_TABLE_FUNC, (void *)poptGetAliasOptions, 0, "Options implemented via popt alias/exec:", NULL },
++#else
+ #define POPT_AUTOALIAS { NULL, '\0', POPT_ARG_INCLUDE_TABLE, poptAliasOptions, \
+ 			0, "Options implemented via popt alias/exec:", NULL },
++#endif
+ 
+ /**
+  * Auto help table options.
+  */
+-extern struct poptOption poptHelpOptions[];
++POPT_DATA extern struct poptOption poptHelpOptions[];
+ 
+-extern struct poptOption * poptHelpOptionsI18N;
++POPT_DATA extern struct poptOption * poptHelpOptionsI18N;
+ 
++#ifdef _WIN32
++#define POPT_AUTOHELP { NULL, '\0', POPT_ARG_INCLUDE_TABLE_FUNC, (void *)poptGetHelpOptions, 0, "Help options:", NULL },
++#else
+ #define POPT_AUTOHELP { NULL, '\0', POPT_ARG_INCLUDE_TABLE, poptHelpOptions, \
+ 			0, "Help options:", NULL },
++#endif
+ 
+ #define POPT_TABLEEND { NULL, '\0', 0, NULL, 0, NULL, NULL }
+ 
+@@ -173,7 +187,7 @@ typedef struct poptOption * poptOption;
+ /**
+  */
+ enum poptCallbackReason {
+-    POPT_CALLBACK_REASON_PRE	= 0, 
++    POPT_CALLBACK_REASON_PRE	= 0,
+     POPT_CALLBACK_REASON_POST	= 1,
+     POPT_CALLBACK_REASON_OPTION = 2
+ };
+@@ -190,12 +204,17 @@ extern "C" {
+  * @param arg		@todo Document.
+  * @param data		@todo Document.
+  */
+-typedef void (*poptCallbackType) (poptContext con, 
++typedef void (*poptCallbackType) (poptContext con,
+ 		enum poptCallbackReason reason,
+ 		const struct poptOption * opt,
+ 		const char * arg,
+ 		const void * data);
+ 
++#ifdef _WIN32
++const struct poptOption * poptGetAliasOptions(void);
++const struct poptOption * poptGetHelpOptions(void);
++#endif
++
+ /**
+  * Destroy context.
+  * @param con		context
+@@ -391,7 +410,7 @@ int poptParseArgvString(const char * s,
+ 		int * argcPtr, const char *** argvPtr);
+ 
+ /**
+- * Parses an input configuration file and returns an string that is a 
++ * Parses an input configuration file and returns an string that is a
+  * command line.  For use with popt.  You must free the return value when done.
+  *
+  * Given the file:
+@@ -400,14 +419,14 @@ int poptParseArgvString(const char * s,
+     #   this one too
+ aaa
+   bbb
+-    ccc   
++    ccc
+ bla=bla
+ 
+ this_is   =   fdsafdas
+-     bad_line=        
++     bad_line=
+   really bad line
+   really bad line  = again
+-5555=   55555   
++5555=   55555
+   test = with lots of spaces
+ \endverbatim
+ *
+@@ -419,12 +438,12 @@ this_is   =   fdsafdas
+ * Passing this to poptParseArgvString() yields an argv of:
+ \verbatim
+ '--aaa'
+-'--bbb' 
+-'--ccc' 
+-'--bla=bla' 
+-'--this_is=fdsafdas' 
+-'--5555=55555' 
+-'--test=with lots of spaces' 
++'--bbb'
++'--ccc'
++'--bla=bla'
++'--this_is=fdsafdas'
++'--5555=55555'
++'--test=with lots of spaces'
+ \endverbatim
+  *
+  * @bug NULL is returned if file line is too long.
+@@ -552,9 +571,9 @@ typedef struct poptBits_s {
+ #define _POPT_BITS_M    ((3U * _POPT_BITS_N) / 2U)
+ #define _POPT_BITS_K    16U	/*!< no. of linear hash combinations */
+ 
+-extern unsigned int _poptBitsN;
+-extern  unsigned int _poptBitsM;
+-extern  unsigned int _poptBitsK;
++POPT_DATA extern unsigned int _poptBitsN;
++POPT_DATA extern  unsigned int _poptBitsM;
++POPT_DATA extern  unsigned int _poptBitsK;
+ 
+ int poptBitsAdd(poptBits bits, const char * s);
+ int poptBitsChk(poptBits bits, const char * s);
+diff --git a/src/poptconfig.c b/src/poptconfig.c
+index bf201e2..d53d0e1 100644
+--- a/src/poptconfig.c
++++ b/src/poptconfig.c
+@@ -3,15 +3,32 @@
+  */
+ 
+ /* (C) 1998-2002 Red Hat, Inc. -- Licensing details are in the COPYING
+-   file accompanying popt source distributions, available from 
++   file accompanying popt source distributions, available from
+    ftp://ftp.rpm.org/pub/rpm/dist. */
+ 
+ #include "system.h"
+ #include "poptint.h"
+ #include <sys/stat.h>
++#ifdef HAVE_UNISTD_H
+ #include <unistd.h>
++#endif
+ #include <fcntl.h>
+ #include <errno.h>
++#ifdef _WIN32
++#include <io.h>
++#define open _open
++#define lseek _lseek
++#define read _read
++#define close _close
++#ifndef S_ISREG
++#define S_ISREG(mode) (((mode) & _S_IFMT) == _S_IFREG)
++#endif
++#ifndef S_IXUSR
++#define S_IXUSR _S_IEXEC
++#define S_IXGRP 0
++#define S_IXOTH 0
++#endif
++#endif
+ 
+ #if defined(HAVE_FNMATCH_H)
+ #include <fnmatch.h>
+@@ -234,7 +251,7 @@ static int poptConfigLine(poptContext con, char * line)
+ 
+     if (con->appName == NULL)
+ 	goto exit;
+-    
++
+     memset(item, 0, sizeof(*item));
+ 
+     appName = se;
+@@ -327,7 +344,7 @@ static int poptConfigLine(poptContext con, char * line)
+ 	item->argv[j] = NULL;
+ 	item->argc = j;
+     }
+-	
++
+     if (!strcmp(entryType, "alias"))
+ 	rc = poptAddItem(con, item, 0);
+     else if (!strcmp(entryType, "exec"))
+@@ -500,7 +517,7 @@ poptInit(int argc, const char ** argv,
+ 
+     if ((argv0 = strrchr(argv[0], '/')) != NULL) argv0++;
+     else argv0 = argv[0];
+-   
++
+     con = poptGetContext(argv0, argc, (const char **)argv, options, 0);
+     if (con != NULL&& poptReadConfigFiles(con, configPaths))
+ 	con = poptFini(con);
+diff --git a/src/popthelp.c b/src/popthelp.c
+index 6738f6a..dc925f2 100644
+--- a/src/popthelp.c
++++ b/src/popthelp.c
+@@ -5,12 +5,14 @@
+  */
+ 
+ /* (C) 1998-2002 Red Hat, Inc. -- Licensing details are in the COPYING
+-   file accompanying popt source distributions, available from 
++   file accompanying popt source distributions, available from
+    ftp://ftp.rpm.org/pub/rpm/dist. */
+ 
+ #include "system.h"
+ 
++#ifndef _WIN32
+ #define        POPT_USE_TIOCGWINSZ
++#endif
+ #ifdef POPT_USE_TIOCGWINSZ
+ #include <sys/ioctl.h>
+ #endif
+@@ -32,7 +34,7 @@
+ NORETURN
+ static void displayArgs(poptContext con,
+ 		UNUSED(enum poptCallbackReason foo),
+-		struct poptOption * key, 
++		struct poptOption * key,
+ 		UNUSED(const char * arg),
+ 		UNUSED(void * data))
+ {
+@@ -81,6 +83,18 @@ static struct poptOption poptHelpOptions2[] = {
+ 
+ struct poptOption * poptHelpOptionsI18N = poptHelpOptions2;
+ 
++#ifdef _WIN32
++const struct poptOption * poptGetAliasOptions(void)
++{
++    return poptAliasOptions;
++}
++
++const struct poptOption * poptGetHelpOptions(void)
++{
++    return poptHelpOptionsI18N;
++}
++#endif
++
+ #define        _POPTHELP_MAXLINE       ((size_t)79)
+ 
+ typedef struct columns_s {
+@@ -88,13 +102,13 @@ typedef struct columns_s {
+     size_t max;
+ } * columns_t;
+ 
+-/** 
++/**
+  * Return no. of columns in output window.
+  * @param fp           FILE
+- * @return             no. of columns 
+- */ 
++ * @return             no. of columns
++ */
+ static size_t maxColumnWidth(FILE *fp)
+-{   
++{
+     size_t maxcols = _POPTHELP_MAXLINE;
+ #if defined(TIOCGWINSZ)
+     struct winsize ws;
+@@ -108,7 +122,7 @@ static size_t maxColumnWidth(FILE *fp)
+     }
+ #endif
+     return maxcols;
+-}   
++}
+ 
+ /**
+  * Determine number of display characters in a string.
+@@ -220,6 +234,13 @@ singleOptionDefaultValue(size_t lineLength,
+     *le++ = ' ';
+   if (opt->arg) {	/* XXX programmer error */
+     poptArg arg = { .ptr = opt->arg };
++#ifdef _WIN32
++    if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC && opt->arg != NULL) {
++        const struct poptOption *(*getTable)(void) =
++            (const struct poptOption *(*)(void))opt->arg;
++        arg.opt = getTable();
++    }
++#endif
+     switch (poptArgType(opt)) {
+     case POPT_ARG_VAL:
+     case POPT_ARG_INT:
+@@ -491,7 +512,7 @@ static size_t maxArgWidth(const struct poptOption * opt,
+     size_t max = 0;
+     size_t len = 0;
+     const char * argDescrip;
+-    
++
+     if (opt != NULL)
+     while (opt->longName || opt->shortName || opt->arg) {
+ 	if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE) {
+@@ -527,7 +548,7 @@ static size_t maxArgWidth(const struct poptOption * opt,
+ 	}
+ 	opt++;
+     }
+-    
++
+     return max;
+ }
+ 
+@@ -587,15 +608,22 @@ static void singleTableHelp(poptContext con, FILE * fp,
+     if (table != NULL)
+     for (opt = table; opt->longName || opt->shortName || opt->arg; opt++) {
+ 	void * arg = opt->arg;
+-	if (poptArgType(opt) != POPT_ARG_INCLUDE_TABLE)
++	if (poptArgType(opt) != POPT_ARG_INCLUDE_TABLE && poptArgType(opt) != POPT_ARG_INCLUDE_TABLE_FUNC)
+ 	    continue;
++#ifdef _WIN32
++	if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC && opt->arg != NULL) {
++	    const struct poptOption *(*getTable)(void) =
++	        (const struct poptOption *(*)(void))opt->arg;
++	    arg = (void *)getTable();
++	}
++#endif
+ 	/* XXX sick hack to preserve pretense of ABI. */
+ 	if (arg == poptHelpOptions)
+ 	    arg = poptHelpOptionsI18N;
+ 	sub_transdom = getTableTranslationDomain(arg);
+ 	if (sub_transdom == NULL)
+ 	    sub_transdom = translation_domain;
+-	    
++
+ 	/* If no popt aliases/execs, skip poptAliasOption processing. */
+ 	if (arg == poptAliasOptions && !(con->numAliases || con->numExecs))
+ 	    continue;
+@@ -688,7 +716,7 @@ static size_t singleOptionUsage(FILE * fp, columns_t columns,
+     if ((columns->cur + len) > columns->max) {
+ 	fprintf(fp, "\n       ");
+ 	columns->cur = (size_t)7;
+-    } 
++    }
+ 
+     fprintf(fp, " [");
+     if (prtshort)
+@@ -768,8 +796,15 @@ static size_t singleTableUsage(poptContext con, FILE * fp, columns_t columns,
+         if (poptArgType(opt) == POPT_ARG_INTL_DOMAIN) {
+ 	    translation_domain = (const char *)opt->arg;
+ 	} else
+-	if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE) {
++	if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE || poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC) {
+ 	    void * arg = opt->arg;
++#ifdef _WIN32
++	    if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC && opt->arg != NULL) {
++	        const struct poptOption *(*getTable)(void) =
++	            (const struct poptOption *(*)(void))opt->arg;
++	        arg = (void *)getTable();
++	    }
++#endif
+ 	    /* XXX sick hack to preserve pretense of ABI. */
+ 	    if (arg == poptHelpOptions)
+ 		arg = poptHelpOptionsI18N;
+@@ -826,15 +861,22 @@ static size_t showShortOptions(const struct poptOption * opt, FILE * fp,
+ 	    if (!strchr(s, opt->shortName) && isprint((int)opt->shortName)
+ 	     && opt->shortName != ' ')
+ 		s[strlen(s)] = opt->shortName;
+-	} else if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE) {
++	} else if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE || poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC) {
+ 	    void * arg = opt->arg;
++#ifdef _WIN32
++	    if (poptArgType(opt) == POPT_ARG_INCLUDE_TABLE_FUNC && opt->arg != NULL) {
++	        const struct poptOption *(*getTable)(void) =
++	            (const struct poptOption *(*)(void))opt->arg;
++	        arg = (void *)getTable();
++	    }
++#endif
+ 	    /* XXX sick hack to preserve pretense of ABI. */
+ 	    if (arg == poptHelpOptions)
+ 		arg = poptHelpOptionsI18N;
+ 	    if (arg)	/* XXX program error */
+ 		len = showShortOptions(arg, fp, s);
+ 	}
+-    } 
++    }
+ 
+     /* On return to top level, print the short options, return print length. */
+     if (s != str && *s != '\0') {
+diff --git a/src/system.h b/src/system.h
+index 5faeabe..98eb519 100644
+--- a/src/system.h
++++ b/src/system.h
+@@ -50,7 +50,11 @@ static inline char * stpcpy (char *dest, const char * src) {
+ #define	xmalloc(_size) 		malloc(_size)
+ #define	xcalloc(_nmemb, _size)	calloc((_nmemb), (_size))
+ #define	xrealloc(_ptr, _size)	realloc((_ptr), (_size))
++#ifdef _WIN32
++#define xstrdup(_str)	_strdup(_str)
++#else
+ #define	xstrdup(_str)	strdup(_str)
++#endif
+ #endif  /* defined(HAVE_MCHECK_H) && defined(__GNUC__) */
+ 
+ #if defined(HAVE_SECURE_GETENV)
+@@ -59,8 +63,8 @@ static inline char * stpcpy (char *dest, const char * src) {
+ #define	getenv(_s)	__secure_getenv(_s)
+ #endif
+ 
+-#if !defined(__GNUC__) && !defined(__attribute__)
+-#define __attribute__(x) 
++#if !defined(__GNUC__) && !defined(__clang__) && !defined(__attribute__)
++#define __attribute__(x)
+ #endif
+ #define UNUSED(x) x __attribute__((__unused__))
+ #define FORMAT(a, b, c) __attribute__((__format__ (a, b, c)))
+-- 
+2.53.0
+
