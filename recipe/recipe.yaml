@@ -42,15 +42,15 @@ tests:
         - popt
   - script:
       - if: win
-        then:
-          - @echo on
-          - @REM See https://github.com/prefix-dev/rattler-build/issues/2657
-          - echo CL=%CL%
-          - echo _CL_=%_CL_%
-          - tasklist | findstr /I mspdbsrv || ver
-          - cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
-          - test_popt.exe
-          - tasklist | findstr /I mspdbsrv || ver
+        then: |
+          @echo on
+          @REM See https://github.com/prefix-dev/rattler-build/issues/2657
+          echo CL=%CL%
+          echo _CL_=%_CL_%
+          tasklist | findstr /I mspdbsrv || ver
+          cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
+          test_popt.exe
+          tasklist | findstr /I mspdbsrv || ver
     requirements:
       run:
         - if: win
