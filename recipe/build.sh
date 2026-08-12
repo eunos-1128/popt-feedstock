@@ -6,7 +6,7 @@ set -exo pipefail
 # script whose gettext data path points to its original build environment.
 # Override gettext_datadir so autopoint can find archive.git.tar.gz in the
 # current conda build prefix.
-if [[ "${target_platform}" == win-* ]]; then
+if [[ "${target_platform}" == "win-"* ]]; then
     export gettext_datadir="$(cygpath -u "${BUILD_PREFIX}")/Library/share/gettext"
     test -f "${gettext_datadir}/archive.git.tar.gz"
 fi
@@ -14,7 +14,9 @@ fi
 ./autogen.sh
 
 # Get an updated config.sub and config.guess
-cp ${BUILD_PREFIX}/share/gnuconfig/config.* build-aux/
+if [[ "${target_platform}" != "win-"* ]]; then
+    cp ${BUILD_PREFIX}/share/gnuconfig/config.* build-aux/
+fi
 
 if [[ "${target_platform}" == "win-"* ]]; then
     # Use an unversioned DLL name on Windows.
