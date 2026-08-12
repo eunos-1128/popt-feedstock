@@ -44,10 +44,12 @@ tests:
       - if: win
         then: |
           @echo on
+          @REM See https://github.com/prefix-dev/rattler-build/issues/2657
+          copy test_popt.c "%TEMP%\test_popt.c"
+          pushd "%TEMP%"
           cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
           test_popt.exe
-          @REM See https://github.com/prefix-dev/rattler-build/issues/2657
-          powershell -NoProfile -Command "Start-Sleep -Seconds 5"
+          popd
     requirements:
       run:
         - if: win
