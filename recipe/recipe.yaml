@@ -43,8 +43,8 @@ tests:
   - script:
       - if: win
         then:
-          @echo on
-          @REM See https://github.com/prefix-dev/rattler-build/issues/2657
+          - @echo on
+          - @REM See https://github.com/prefix-dev/rattler-build/issues/2657
           - echo CL=%CL%
           - echo _CL_=%_CL_%
           - tasklist | findstr /I mspdbsrv || ver
