@@ -5,9 +5,7 @@ set -exo pipefail
 ./autogen.sh
 
 # Get an updated config.sub and config.guess
-if [[ "${target_platform}" != "win-"* ]]; then
-    cp ${BUILD_PREFIX}/share/gnuconfig/config.* build-aux/
-fi
+cp ${BUILD_PREFIX}/share/gnuconfig/config.* build-aux/
 
 if [[ "${target_platform}" == "win-"* ]]; then
     # Use an unversioned DLL name on Windows.
