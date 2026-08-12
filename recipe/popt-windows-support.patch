@@ -1,7 +1,7 @@
 From e7113e5f3d33b0fd19dbdebf5a542fff8d09eba4 Mon Sep 17 00:00:00 2001
 From: "UENO, M." <eunosium-1128@live.jp>
 Date: Wed, 12 Aug 2026 08:17:05 +0000
-Subject: [PATCH] Add Windows compatibility support
+Subject: [PATCH 1/2] Add Windows compatibility support
 
 ---
  src/popt.c       | 61 +++++++++++++++++++++++++++++++++-------
@@ -605,6 +605,45 @@ index 5faeabe..98eb519 100644
  #endif
  #define UNUSED(x) x __attribute__((__unused__))
  #define FORMAT(a, b, c) __attribute__((__format__ (a, b, c)))
+-- 
+2.53.0
+
+
+From 7d3ba4099250d2cc41ad89de62c324e6e0cb3759 Mon Sep 17 00:00:00 2001
+From: "UENO, M." <eunosium-1128@live.jp>
+Date: Wed, 12 Aug 2026 08:34:37 +0000
+Subject: [PATCH 2/2] Add Windows compatibility support
+
+---
+ src/popt.h       | 1 +
+ src/poptconfig.c | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/popt.h b/src/popt.h
+index f7e17ad..6f0b4e6 100644
+--- a/src/popt.h
++++ b/src/popt.h
+@@ -43,6 +43,7 @@
+ #define	POPT_ARG_ARGV		12U	/*!< dupe'd arg appended to realloc'd argv array. */
+ #define	POPT_ARG_SHORT		13U	/*!< arg ==> short */
+ #define	POPT_ARG_BITSET		(16U+14U)	/*!< arg ==> bit set */
++#define POPT_ARG_INCLUDE_TABLE_FUNC 15U /*!< arg points to function returning table */
+ 
+ #define POPT_ARG_MASK		0x000000FFU
+ #define POPT_GROUP_MASK		0x0000FF00U
+diff --git a/src/poptconfig.c b/src/poptconfig.c
+index d53d0e1..93a5fa2 100644
+--- a/src/poptconfig.c
++++ b/src/poptconfig.c
+@@ -156,7 +156,7 @@ int poptReadFile(const char * fn, char ** bp, size_t * nbp, int flags)
+      || (uintmax_t)nb >= SIZE_MAX
+      || lseek(fdno, 0, SEEK_SET) == (off_t)-1
+      || (b = calloc(sizeof(*b), (size_t)nb + 1)) == NULL
+-     || read(fdno, (char *)b, (size_t)nb) != (ssize_t)nb)
++     || read(fdno, (char *)b, (size_t)nb) != (int)nb)
+     {
+ 	int oerrno = errno;
+ 	(void) close(fdno);
 -- 
 2.53.0
 
