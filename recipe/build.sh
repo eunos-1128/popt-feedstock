@@ -2,6 +2,8 @@
 
 set -exo pipefail
 
+./autogen.sh
+
 # Get an updated config.sub and config.guess
 if [[ "${target_platform}" != "win-"* ]]; then
     cp ${BUILD_PREFIX}/share/gnuconfig/config.* build-aux/
