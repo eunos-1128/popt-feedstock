@@ -46,11 +46,11 @@ tests:
           @echo on
           @REM See https://github.com/prefix-dev/rattler-build/issues/2657
           echo CL=%CL%
-          echo _CL_=%_CL_%
-          tasklist | findstr /I mspdbsrv || ver
+          echo _CL_=%_CL_
+          tasklist | findstr /I "mspdbsrv vctip" || ver
           cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
           test_popt.exe
-          tasklist | findstr /I mspdbsrv || ver
+          tasklist | findstr /I "mspdbsrv vctip" || ver
     requirements:
       run:
         - if: win
