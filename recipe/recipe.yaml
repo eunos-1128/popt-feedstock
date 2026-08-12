@@ -47,7 +47,7 @@ tests:
           cl /nologo /W4 /I"%LIBRARY_INC%" test_popt.c /link /LIBPATH:"%LIBRARY_LIB%" popt.lib /OUT:test_popt.exe
           test_popt.exe
           @REM See https://github.com/prefix-dev/rattler-build/issues/2657
-          timeout /t 5 /nobreak >NUL
+          powershell -NoProfile -Command "Start-Sleep -Seconds 5"
     requirements:
       run:
         - if: win
