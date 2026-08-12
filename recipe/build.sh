@@ -209,8 +209,8 @@ const struct poptOption * poptGetHelpOptions(void)\
       'POPT_DATA\|poptGetAliasOptions\|poptGetHelpOptions' \
       src/popt.h src/popthelp.c || true
 
-    # Do not encode the libtool ABI version in the Windows DLL filename.
-    sed -i 's/^[[:space:]]*libpopt_la_LDFLAGS += -version-info 0:2:0$/libpopt_la_LDFLAGS += -avoid-version/' src/Makefile.in
+    # Use an unversioned DLL name on Windows.
+    sed -i 's/-version-info 0:2:0/-avoid-version/' src/Makefile.in
 fi
 
 ./configure --prefix=${PREFIX} --disable-debug --disable-dependency-tracking --disable-static
